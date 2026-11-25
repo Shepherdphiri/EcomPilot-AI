@@ -8,6 +8,7 @@ import {
   PenLine,
 } from 'lucide-react';
 import { GeneratedListingContent, ProductListingAudit } from '../types/ecom';
+import { postJson } from '../utils/api';
 import { scoreColorClass } from '../utils/formatters';
 
 interface ListingContentViewProps {
@@ -68,12 +69,41 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      setUploadedImagePreview(result);
-      const parts = result.split(',');
-      if (parts.length === 2) {
-        setUploadedBase64(parts[1]);
-        setUploadedMimeType(file.type || 'image/jpeg');
-      }
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1280;
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.85);
+          setUploadedImagePreview(compressed);
+          const parts = compressed.split(',');
+          if (parts.length === 2) {
+            setUploadedBase64(parts[1]);
+            setUploadedMimeType('image/jpeg');
+          }
+          return;
+        }
+        setUploadedImagePreview(result);
+        const parts = result.split(',');
+        if (parts.length === 2) {
+          setUploadedBase64(parts[1]);
+          setUploadedMimeType(file.type || 'image/jpeg');
+        }
+      };
+      img.onerror = () => {
+        setUploadedImagePreview(result);
+        const parts = result.split(',');
+        if (parts.length === 2) {
+          setUploadedBase64(parts[1]);
+          setUploadedMimeType(file.type || 'image/jpeg');
+        }
+      };
+      img.src = result;
     };
     reader.readAsDataURL(file);
   };
@@ -90,10 +120,9 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
     setErrorMsg(null);
 
     try {
-      const res = await fetch('/api/ai/content-generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const data = await postJson<GeneratedListingContent>(
+        '/api/ai/content-generate',
+        {
           productName,
           sku: selectedListing?.sku,
           brand,
@@ -103,13 +132,9 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
           currentIssues: selectedListing?.recommendations.join('; '),
           imageBase64: uploadedBase64,
           imageMimeType: uploadedMimeType,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to generate marketplace content.');
-      }
-      setGenerated(data as GeneratedListingContent);
+        }
+      );
+      setGenerated(data);
     } catch (err) {
       setErrorMsg(
         err instanceof Error ? err.message : 'Unable to reach AI content service.'
@@ -129,7 +154,7 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
               Listing Quality & Content Generator
             </h1>
             <p className="mt-1 text-sm text-slate-600">
-              9-point marketplace audit paired with English-language channel copy generation for Amazon, Takealot, and Shopify.
+              9-point marketplace audit paired with English-language channel copy generation for Takealot and Shopify.
             </p>
           </div>
           <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
@@ -137,115 +162,134 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
           </span>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-          {listings.map((item) => {
-            const active = item.sku === selectedListing?.sku;
-            return (
-              <button
-                key={item.sku}
-                type="button"
-                onClick={() => handleSelectProduct(item)}
-                className={`flex items-center gap-3.5 rounded-lg border p-3.5 text-left transition-colors ${
-                  active
-                    ? 'border-blue-700 bg-blue-50/40'
-                    : 'border-slate-200 bg-white hover:bg-slate-50'
-                }`}
-              >
-                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-slate-100">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    referrerPolicy="no-referrer"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-slate-500">{item.sku}</span>
-                    <span
-                      className={`font-mono text-sm font-bold tabular-nums ${scoreColorClass(
-                        item.listingScore
-                      )}`}
-                    >
-                      {item.listingScore}/100
-                    </span>
+        {listings.length === 0 ? (
+          <div className="mt-5 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-5 py-6 text-center text-sm text-slate-600">
+            No catalog audit items loaded (Demo data removed). You can still enter your own product details below to generate Takealot & Shopify listings.
+          </div>
+        ) : (
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+            {listings.map((item) => {
+              const active = item.sku === selectedListing?.sku;
+              return (
+                <button
+                  key={item.sku}
+                  type="button"
+                  onClick={() => handleSelectProduct(item)}
+                  className={`flex items-center gap-3.5 rounded-lg border p-3.5 text-left transition-colors ${
+                    active
+                      ? 'border-blue-700 bg-blue-50/40'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-slate-100">
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      referrerPolicy="no-referrer"
+                      className="h-full w-full object-cover"
+                    />
                   </div>
-                  <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">
-                    {item.title}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {item.status === 'suppressed'
-                      ? 'Suppressed on Amazon'
-                      : 'Optimization available'}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs text-slate-500">{item.sku}</span>
+                      <span
+                        className={`font-mono text-sm font-bold tabular-nums ${scoreColorClass(
+                          item.listingScore
+                        )}`}
+                      >
+                        {item.listingScore}/100
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">
+                      {item.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {item.status === 'suppressed'
+                        ? 'Not buyable on Takealot'
+                        : 'Optimization available'}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Split Workspace: 9-Point Quality Audit + AI Generator */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         {/* Left 5 cols: Quality Breakdown & Recommendations */}
         <section className="rounded-lg border border-slate-200 bg-white p-6 xl:col-span-5">
-          <div className="flex items-baseline justify-between border-b border-slate-200 pb-4">
-            <div>
+          {!selectedListing ? (
+            <div className="py-10 text-center">
               <h2 className="text-base font-semibold text-slate-900">
                 Listing Quality Score
               </h2>
-              <p className="text-xs text-slate-500">
-                SKU {selectedListing.sku} · {selectedListing.category}
+              <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                No catalog audits are currently loaded. Switch Workspace Data to Use Demo in the sidebar to inspect sample 9-point audits, or generate custom product copy on the right.
               </p>
             </div>
-            <span
-              className={`font-mono text-2xl font-bold tabular-nums ${scoreColorClass(
-                selectedListing.listingScore
-              )}`}
-            >
-              {selectedListing.listingScore}/100
-            </span>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {CHECK_LABELS.map((c) => {
-              const val = selectedListing.checks[c.key];
-              const barColor =
-                val >= 85 ? 'bg-emerald-600' : val >= 65 ? 'bg-amber-500' : 'bg-red-600';
-              return (
-                <div key={c.key}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-slate-700">{c.label}</span>
-                    <span className="font-mono font-semibold text-slate-900 tabular-nums">
-                      {val}/100
-                    </span>
-                  </div>
-                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className={`h-full rounded-full ${barColor}`}
-                      style={{ width: `${val}%` }}
-                    />
-                  </div>
+          ) : (
+            <>
+              <div className="flex items-baseline justify-between border-b border-slate-200 pb-4">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">
+                    Listing Quality Score
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    SKU {selectedListing.sku} · {selectedListing.category}
+                  </p>
                 </div>
-              );
-            })}
-          </div>
+                <span
+                  className={`font-mono text-2xl font-bold tabular-nums ${scoreColorClass(
+                    selectedListing.listingScore
+                  )}`}
+                >
+                  {selectedListing.listingScore}/100
+                </span>
+              </div>
 
-          <div className="mt-6 border-t border-slate-200 pt-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Audit Recommendations
-            </h3>
-            <ul className="mt-2.5 space-y-2 text-sm text-slate-700">
-              {selectedListing.recommendations.map((rec, idx) => (
-                <li key={idx} className="flex items-start gap-2">
-                  <span className="mt-1 font-mono text-xs font-semibold text-blue-700">
-                    0{idx + 1}.
-                  </span>
-                  <span>{rec}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+              <div className="mt-4 space-y-3">
+                {CHECK_LABELS.map((c) => {
+                  const val = selectedListing.checks[c.key];
+                  const barColor =
+                    val >= 85 ? 'bg-emerald-600' : val >= 65 ? 'bg-amber-500' : 'bg-red-600';
+                  return (
+                    <div key={c.key}>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-slate-700">{c.label}</span>
+                        <span className="font-mono font-semibold text-slate-900 tabular-nums">
+                          {val}/100
+                        </span>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className={`h-full rounded-full ${barColor}`}
+                          style={{ width: `${val}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-6 border-t border-slate-200 pt-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Audit Recommendations
+                </h3>
+                <ul className="mt-2.5 space-y-2 text-sm text-slate-700">
+                  {selectedListing.recommendations.map((rec, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="mt-1 font-mono text-xs font-semibold text-blue-700">
+                        0{idx + 1}.
+                      </span>
+                      <span>{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
         </section>
 
         {/* Right 7 cols: AI Content Generator Form + Results */}
@@ -360,7 +404,7 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
                 </div>
               ) : (
                 <span className="text-xs text-slate-500">
-                  Generates Amazon, Takealot, and Shopify copy simultaneously
+                  Generates Takealot and Shopify copy simultaneously
                 </span>
               )}
 
@@ -404,24 +448,25 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
                   <span className="font-mono text-sm font-semibold text-emerald-700 tabular-nums">
                     Projected Score: {generated.projectedScore}/100
                   </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onApplyGeneratedContent(
-                        selectedListing.sku,
-                        generated.projectedScore
-                      )
-                    }
-                    className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 whitespace-nowrap"
-                  >
-                    Apply Score to Audit
-                  </button>
+                  {selectedListing && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onApplyGeneratedContent(
+                          selectedListing.sku,
+                          generated.projectedScore
+                        )
+                      }
+                      className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 whitespace-nowrap"
+                    >
+                      Apply Score to Audit
+                    </button>
+                  )}
                 </div>
               </div>
 
               {(
                 [
-                  { id: 'amazon', label: 'Amazon Title', value: generated.amazonTitle },
                   { id: 'takealot', label: 'Takealot Title', value: generated.takealotTitle },
                   { id: 'shopify', label: 'Shopify Title', value: generated.shopifyTitle },
                   { id: 'meta', label: 'Meta Description', value: generated.metaDescription },

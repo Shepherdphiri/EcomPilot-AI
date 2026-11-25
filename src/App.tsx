@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Menu, Search } from 'lucide-react';
 import {
+  EMPTY_DAILY_REPORT,
   INITIAL_DAILY_REPORT,
   INITIAL_INVENTORY,
   INITIAL_LISTING_AUDITS,
@@ -31,17 +32,20 @@ import { InventoryPricingView } from './components/InventoryPricingView';
 import { ReviewsShippingView } from './components/ReviewsShippingView';
 import { DailyReportView } from './components/DailyReportView';
 import { AiAssistantView } from './components/AiAssistantView';
-import { SystemBlueprintView } from './components/SystemBlueprintView';
+import {
+  ConnectChannelsView,
+  LiveSyncPayload,
+} from './components/ConnectChannelsView';
 
 const SECTION_TITLES: Record<NavSection, string> = {
   priority: 'Priority Center',
   marketplaces: 'Marketplace Health',
+  connect_channels: 'Connect Channels',
   listings: 'Listing & Content',
   inventory_pricing: 'Inventory & Pricing',
   reviews_shipping: 'Reviews & Shipping',
   daily_report: 'Morning Report',
   assistant: 'Operations Chat',
-  blueprint: 'System Blueprint',
 };
 
 export default function App() {
@@ -53,20 +57,46 @@ export default function App() {
     null
   );
 
-  const [tasks, setTasks] = useState<PriorityTask[]>(INITIAL_TASKS);
-  const [marketplaces, setMarketplaces] = useState<MarketplaceHealth[]>(
-    INITIAL_MARKETPLACES
+  const [dataMode, setDataMode] = useState<'demo' | 'clean'>(() => {
+    try {
+      return localStorage.getItem('ecompilot_data_mode') === 'clean' ? 'clean' : 'demo';
+    } catch {
+      return 'demo';
+    }
+  });
+
+  const [tasks, setTasks] = useState<PriorityTask[]>(() =>
+    dataMode === 'demo' ? INITIAL_TASKS : []
   );
-  const [listings, setListings] = useState<ProductListingAudit[]>(
-    INITIAL_LISTING_AUDITS
+  const [marketplaces, setMarketplaces] = useState<MarketplaceHealth[]>(() =>
+    dataMode === 'demo' ? INITIAL_MARKETPLACES : []
   );
-  const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_INVENTORY);
-  const [pricing, setPricing] = useState<PriceComparisonRow[]>(INITIAL_PRICING);
-  const [reviews, setReviews] = useState<ReviewCluster[]>(INITIAL_REVIEWS);
-  const [shipments, setShipments] = useState<ShipmentRecord[]>(INITIAL_SHIPMENTS);
-  const [dailyReport, setDailyReport] = useState<DailyReportData>(
-    INITIAL_DAILY_REPORT
+  const [listings, setListings] = useState<ProductListingAudit[]>(() =>
+    dataMode === 'demo' ? INITIAL_LISTING_AUDITS : []
   );
+  const [inventory, setInventory] = useState<InventoryItem[]>(() =>
+    dataMode === 'demo' ? INITIAL_INVENTORY : []
+  );
+  const [pricing, setPricing] = useState<PriceComparisonRow[]>(() =>
+    dataMode === 'demo' ? INITIAL_PRICING : []
+  );
+  const [reviews, setReviews] = useState<ReviewCluster[]>(() =>
+    dataMode === 'demo' ? INITIAL_REVIEWS : []
+  );
+  const [shipments, setShipments] = useState<ShipmentRecord[]>(() =>
+    dataMode === 'demo' ? INITIAL_SHIPMENTS : []
+  );
+  const [dailyReport, setDailyReport] = useState<DailyReportData>(() =>
+    dataMode === 'demo' ? INITIAL_DAILY_REPORT : EMPTY_DAILY_REPORT
+  );
+
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [shopifyConnected, setShopifyConnected] = useState(false);
+  const [shopifyDomain, setShopifyDomain] = useState<string | null>(null);
+  const [takealotConnected, setTakealotConnected] = useState(false);
+  const [lastSyncSummary, setLastSyncSummary] = useState<
+    LiveSyncPayload['summary'] | null
+  >(null);
 
   const openTasks = useMemo(() => tasks.filter((t) => !t.resolved), [tasks]);
   const criticalCount = useMemo(
@@ -252,6 +282,80 @@ export default function App() {
     setActiveSection('assistant');
   };
 
+  const handleLiveSyncSuccess = (
+    payload: LiveSyncPayload,
+    status: {
+      shopifyConnected: boolean;
+      shopifyDomain: string | null;
+      takealotConnected: boolean;
+    }
+  ) => {
+    setMarketplaces(payload.marketplaces);
+    setTasks(payload.tasks);
+    setInventory(payload.inventory);
+    setPricing(payload.pricing);
+    setDailyReport(payload.dailyReport);
+    setListings([]);
+    setReviews([]);
+    setShipments([]);
+    setDataMode('clean');
+    try {
+      localStorage.setItem('ecompilot_data_mode', 'clean');
+    } catch {
+      // ignore storage errors
+    }
+    setIsLiveMode(true);
+    setShopifyConnected(status.shopifyConnected);
+    setShopifyDomain(status.shopifyDomain);
+    setTakealotConnected(status.takealotConnected);
+    setLastSyncSummary(payload.summary);
+  };
+
+  const handleUseDemoData = () => {
+    setMarketplaces(INITIAL_MARKETPLACES);
+    setTasks(INITIAL_TASKS);
+    setListings(INITIAL_LISTING_AUDITS);
+    setInventory(INITIAL_INVENTORY);
+    setPricing(INITIAL_PRICING);
+    setReviews(INITIAL_REVIEWS);
+    setShipments(INITIAL_SHIPMENTS);
+    setDailyReport(INITIAL_DAILY_REPORT);
+    setDataMode('demo');
+    try {
+      localStorage.setItem('ecompilot_data_mode', 'demo');
+    } catch {
+      // ignore storage errors
+    }
+    setIsLiveMode(false);
+    setShopifyConnected(false);
+    setShopifyDomain(null);
+    setTakealotConnected(false);
+    setLastSyncSummary(null);
+  };
+
+  const handleClearDemoData = () => {
+    fetch('/api/connectors/disconnect', { method: 'POST' }).catch(() => {});
+    setMarketplaces([]);
+    setTasks([]);
+    setListings([]);
+    setInventory([]);
+    setPricing([]);
+    setReviews([]);
+    setShipments([]);
+    setDailyReport(EMPTY_DAILY_REPORT);
+    setDataMode('clean');
+    try {
+      localStorage.setItem('ecompilot_data_mode', 'clean');
+    } catch {
+      // ignore storage errors
+    }
+    setIsLiveMode(false);
+    setShopifyConnected(false);
+    setShopifyDomain(null);
+    setTakealotConnected(false);
+    setLastSyncSummary(null);
+  };
+
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-[#0F172A]">
       <Sidebar
@@ -259,6 +363,10 @@ export default function App() {
         onSelectSection={setActiveSection}
         activeRole={activeRole}
         onChangeRole={setActiveRole}
+        dataMode={dataMode}
+        isLiveMode={isLiveMode}
+        onUseDemoData={handleUseDemoData}
+        onClearDemoData={handleClearDemoData}
         openTaskCount={openTasks.length}
         criticalCount={criticalCount}
         mobileOpen={mobileMenuOpen}
@@ -278,7 +386,7 @@ export default function App() {
               <Menu className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2 text-sm truncate">
-              <span className="text-slate-500 whitespace-nowrap">EcomPilot AI</span>
+              <span className="text-slate-500 whitespace-nowrap">EcomPilot</span>
               <span className="text-slate-300" aria-hidden="true">/</span>
               <span className="font-semibold text-slate-900 truncate">
                 {SECTION_TITLES[activeSection]}
@@ -332,6 +440,21 @@ export default function App() {
               marketplaces={marketplaces}
               onSyncMarketplace={handleSyncMarketplace}
               onSyncAll={handleSyncAllMarketplaces}
+              onOpenConnect={() => setActiveSection('connect_channels')}
+            />
+          )}
+
+          {activeSection === 'connect_channels' && (
+            <ConnectChannelsView
+              dataMode={dataMode}
+              isLiveMode={isLiveMode}
+              shopifyConnected={shopifyConnected}
+              shopifyDomain={shopifyDomain}
+              takealotConnected={takealotConnected}
+              lastSyncSummary={lastSyncSummary}
+              onSyncSuccess={handleLiveSyncSuccess}
+              onUseDemoData={handleUseDemoData}
+              onClearDemoData={handleClearDemoData}
             />
           )}
 
@@ -379,9 +502,14 @@ export default function App() {
               onConsumeInitialPrompt={() => setQueuedAssistantPrompt(null)}
             />
           )}
-
-          {activeSection === 'blueprint' && <SystemBlueprintView />}
         </main>
+
+        <footer className="border-t border-slate-200 bg-white px-4 py-3 lg:px-8">
+          <div className="mx-auto flex max-w-[1360px] items-center justify-between text-xs text-slate-500">
+            <span>EcomPilot</span>
+            <span>Developed by Shepherd Zisper Phiri</span>
+          </div>
+        </footer>
       </div>
     </div>
   );

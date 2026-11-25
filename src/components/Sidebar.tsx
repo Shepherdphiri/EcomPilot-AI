@@ -4,7 +4,7 @@ import {
   BarChart3,
   Boxes,
   FileText,
-  Layers,
+  Link2,
   MessageSquare,
   MessageSquareWarning,
   PenLine,
@@ -19,6 +19,10 @@ interface SidebarProps {
   onSelectSection: (section: NavSection) => void;
   activeRole: UserRole;
   onChangeRole: (role: UserRole) => void;
+  dataMode: 'demo' | 'clean';
+  isLiveMode: boolean;
+  onUseDemoData: () => void;
+  onClearDemoData: () => void;
   openTaskCount: number;
   criticalCount: number;
   mobileOpen: boolean;
@@ -32,12 +36,12 @@ const NAV_ITEMS: Array<{
 }> = [
   { id: 'priority', label: 'Priority Center', icon: AlertTriangle },
   { id: 'marketplaces', label: 'Marketplace Health', icon: Store },
+  { id: 'connect_channels', label: 'Connect Channels', icon: Link2 },
   { id: 'listings', label: 'Listing & Content', icon: PenLine },
   { id: 'inventory_pricing', label: 'Inventory & Pricing', icon: Boxes },
   { id: 'reviews_shipping', label: 'Reviews & Shipping', icon: MessageSquareWarning },
   { id: 'daily_report', label: 'Morning Report', icon: FileText },
   { id: 'assistant', label: 'Operations Chat', icon: MessageSquare },
-  { id: 'blueprint', label: 'System Blueprint', icon: Layers },
 ];
 
 const ROLES: UserRole[] = [
@@ -52,6 +56,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectSection,
   activeRole,
   onChangeRole,
+  dataMode,
+  isLiveMode,
+  onUseDemoData,
+  onClearDemoData,
   openTaskCount,
   criticalCount,
   mobileOpen,
@@ -72,7 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <BarChart3 className="h-4 w-4" />
           </span>
           <span className="font-display text-base font-bold tracking-tight text-slate-900 whitespace-nowrap">
-            EcomPilot AI
+            EcomPilot
           </span>
         </button>
         <button
@@ -104,6 +112,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </option>
           ))}
         </select>
+
+        <div className="mt-3">
+          <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-slate-500">
+            <span>Workspace Data</span>
+            <span className="text-slate-700">
+              {isLiveMode ? 'Live Sync' : dataMode === 'demo' ? 'Demo' : 'Empty'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-1 rounded-md bg-slate-100 p-1">
+            <button
+              type="button"
+              onClick={onUseDemoData}
+              className={`rounded px-2 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
+                dataMode === 'demo' && !isLiveMode
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Use Demo
+            </button>
+            <button
+              type="button"
+              onClick={onClearDemoData}
+              className={`rounded px-2 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
+                dataMode === 'clean' || isLiveMode
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Remove Demo
+            </button>
+          </div>
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Primary navigation">
@@ -150,19 +191,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       <div className="border-t border-slate-200 p-4">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-slate-100">
-            <img
-              src="/src/assets/images/avatar_ecom_manager_1795615581153.jpg"
-              alt="Tshepo Mokoena"
-              referrerPolicy="no-referrer"
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900">Tshepo Mokoena</p>
-            <p className="truncate text-xs text-slate-500">Apex Home · ZAR Workspace</p>
-          </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-slate-900">Shepherd</p>
+          <p className="truncate text-xs text-slate-500">Admin · ZAR Workspace</p>
         </div>
       </div>
     </aside>

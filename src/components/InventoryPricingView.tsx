@@ -74,7 +74,14 @@ export const InventoryPricingView: React.FC<InventoryPricingViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {inventory.map((item) => {
+                {inventory.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-10 text-center text-sm text-slate-500">
+                      No inventory items loaded. Connect Shopify or Takealot under Connect Channels, or switch Workspace Data to Use Demo in the sidebar.
+                    </td>
+                  </tr>
+                ) : (
+                  inventory.map((item) => {
                   const daysCover =
                     item.dailySalesVelocity > 0
                       ? Math.round((item.currentStock / item.dailySalesVelocity) * 10) / 10
@@ -154,7 +161,8 @@ export const InventoryPricingView: React.FC<InventoryPricingViewProps> = ({
                       </td>
                     </tr>
                   );
-                })}
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -167,16 +175,21 @@ export const InventoryPricingView: React.FC<InventoryPricingViewProps> = ({
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs font-medium text-slate-500">
                   <th className="px-6 py-3">SKU & Product</th>
                   <th className="px-4 py-3 text-right">Shopify</th>
-                  <th className="px-4 py-3 text-right">Amazon</th>
                   <th className="px-4 py-3 text-right">Takealot</th>
-                  <th className="px-4 py-3 text-right">Makro</th>
                   <th className="px-4 py-3 text-right">Variance</th>
-                  <th className="px-4 py-3">AI Recommendation</th>
+                  <th className="px-4 py-3">Recommendation</th>
                   <th className="px-6 py-3 text-right">Sync</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {pricing.map((row) => (
+                {pricing.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-slate-500">
+                      No cross-channel pricing comparisons loaded. Connect both Shopify and Takealot under Connect Channels, or switch Workspace Data to Use Demo in the sidebar.
+                    </td>
+                  </tr>
+                ) : (
+                  pricing.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50/70">
                     <td className="px-6 py-4">
                       <p className="font-semibold text-slate-900">{row.productName}</p>
@@ -187,20 +200,14 @@ export const InventoryPricingView: React.FC<InventoryPricingViewProps> = ({
                     <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-900">
                       {row.prices.shopify ? formatZar(row.prices.shopify) : '—'}
                     </td>
-                    <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-900">
-                      {row.prices.amazon_seller ? formatZar(row.prices.amazon_seller) : '—'}
-                    </td>
-                    <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-900">
-                      {row.prices.takealot ? formatZar(row.prices.takealot) : '—'}
-                    </td>
                     <td
                       className={`px-4 py-4 text-right font-mono font-semibold tabular-nums ${
-                        !row.resolved && row.prices.makro && row.prices.makro < row.targetPriceZar
+                        !row.resolved && row.prices.takealot && row.prices.takealot < row.targetPriceZar
                           ? 'text-red-700'
                           : 'text-slate-900'
                       }`}
                     >
-                      {row.prices.makro ? formatZar(row.prices.makro) : '—'}
+                      {row.prices.takealot ? formatZar(row.prices.takealot) : '—'}
                     </td>
                     <td className="px-4 py-4 text-right font-mono tabular-nums">
                       {row.variancePercent > 0 ? (
@@ -231,7 +238,8 @@ export const InventoryPricingView: React.FC<InventoryPricingViewProps> = ({
                       )}
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

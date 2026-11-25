@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import { DailyReportData, UserRole } from '../types/ecom';
+import { postJson } from '../utils/api';
 import { formatZar, severityClasses, severityLabel } from '../utils/formatters';
 
 interface DailyReportViewProps {
@@ -23,15 +24,11 @@ export const DailyReportView: React.FC<DailyReportViewProps> = ({
     setRegenerating(true);
     setErrorMsg(null);
     try {
-      const res = await fetch('/api/ai/daily-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: activeRole, storeSnapshot }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to regenerate morning report.');
-      }
+      const data = await postJson<{
+        executiveSummary: string;
+        yesterdayNarrative: string;
+        topActions: DailyReportData['topActions'];
+      }>('/api/ai/daily-report', { role: activeRole, storeSnapshot });
       onUpdateReport({
         executiveSummary: data.executiveSummary,
         yesterdayNarrative: data.yesterdayNarrative,
@@ -156,41 +153,47 @@ export const DailyReportView: React.FC<DailyReportViewProps> = ({
               Ranked by recoverable daily revenue in ZAR
             </p>
           </div>
-          <ul className="divide-y divide-slate-200">
-            {report.topActions.map((act) => (
-              <li
-                key={act.rank}
-                className="flex items-center justify-between gap-4 px-6 py-4"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 font-mono text-sm font-bold text-slate-400 tabular-nums">
-                    0{act.rank}
-                  </span>
-                  <div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span
-                        className={`rounded px-2 py-0.5 font-medium ${severityClasses(
-                          act.priority
-                        )}`}
-                      >
-                        {severityLabel(act.priority)}
-                      </span>
-                      <span className="text-slate-500">{act.channel}</span>
+          {report.topActions.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-slate-500">
+              No recommended actions yet. Connect Shopify or Takealot under Connect Channels, or load Demo Data from the sidebar.
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-200">
+              {report.topActions.map((act) => (
+                <li
+                  key={act.rank}
+                  className="flex items-center justify-between gap-4 px-6 py-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 font-mono text-sm font-bold text-slate-400 tabular-nums">
+                      0{act.rank}
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span
+                          className={`rounded px-2 py-0.5 font-medium ${severityClasses(
+                            act.priority
+                          )}`}
+                        >
+                          {severityLabel(act.priority)}
+                        </span>
+                        <span className="text-slate-500">{act.channel}</span>
+                      </div>
+                      <p className="mt-1 text-sm font-medium text-slate-900">
+                        {act.action}
+                      </p>
                     </div>
-                    <p className="mt-1 text-sm font-medium text-slate-900">
-                      {act.action}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-xs text-slate-500">Est. Recovery</p>
+                    <p className="font-mono text-sm font-semibold text-emerald-700 tabular-nums">
+                      +{formatZar(act.impactZar)}
                     </p>
                   </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-xs text-slate-500">Est. Recovery</p>
-                  <p className="font-mono text-sm font-semibold text-emerald-700 tabular-nums">
-                    +{formatZar(act.impactZar)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </div>

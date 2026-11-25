@@ -1,4 +1,4 @@
-export const SUPABASE_POSTGRES_SCHEMA = `-- EcomPilot AI — Production Supabase PostgreSQL Schema
+export const SUPABASE_POSTGRES_SCHEMA = `-- EcomPilot — Production Supabase PostgreSQL Schema
 -- Modular multi-tenant ecommerce operations platform
 -- Supports: Shopify, Amazon SC/VC, Takealot, Makro, Leroy Merlin + future channels
 

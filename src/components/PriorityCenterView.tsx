@@ -322,50 +322,68 @@ export const PriorityCenterView: React.FC<PriorityCenterViewProps> = ({
             onClick={() => onNavigate('marketplaces')}
             className="text-xs font-medium text-blue-700 hover:text-blue-800 whitespace-nowrap"
           >
-            Inspect All 6 Channels →
+            Inspect Channels →
           </button>
         </div>
 
-        <div className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-3 lg:divide-x">
-          {marketplaces.slice(0, 6).map((mp) => (
-            <div key={mp.id} className="border-b border-slate-200 p-5 last:border-b-0">
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-sm font-semibold text-slate-900">{mp.name}</h3>
-                <span
-                  className={`font-mono text-base font-bold tabular-nums ${scoreColorClass(
-                    mp.healthScore
-                  )}`}
-                >
-                  {mp.healthScore}/100
-                </span>
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                <div>
-                  <p className="text-slate-500">Active</p>
-                  <p className="font-mono font-medium text-slate-900 tabular-nums">
-                    {mp.activeListings}/{mp.totalListings}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Suppressed</p>
-                  <p
-                    className={`font-mono font-medium tabular-nums ${
-                      mp.suppressedListings > 0 ? 'text-red-700' : 'text-slate-900'
-                    }`}
+        {marketplaces.length === 0 ? (
+          <div className="px-6 py-10 text-center">
+            <p className="text-sm font-semibold text-slate-900">
+              No channels connected
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Connect your Shopify store or Takealot account under Connect Channels, or switch Workspace Data to Use Demo in the sidebar.
+            </p>
+            <button
+              type="button"
+              onClick={() => onNavigate('connect_channels')}
+              className="mt-4 rounded-md bg-blue-700 px-4 py-2 text-xs font-medium text-white hover:bg-blue-800"
+            >
+              Connect Shopify or Takealot
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-2 sm:divide-y-0 sm:divide-x">
+            {marketplaces.slice(0, 2).map((mp) => (
+              <div key={mp.id} className="border-b border-slate-200 p-5 last:border-b-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-slate-900">{mp.name}</h3>
+                  <span
+                    className={`font-mono text-base font-bold tabular-nums ${scoreColorClass(
+                      mp.healthScore
+                    )}`}
                   >
-                    {mp.suppressedListings}
-                  </p>
+                    {mp.healthScore}/100
+                  </span>
                 </div>
-                <div>
-                  <p className="text-slate-500">Issues</p>
-                  <p className="font-mono font-medium text-slate-900 tabular-nums">
-                    {mp.inventoryIssues + mp.contentIssues}
-                  </p>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <p className="text-slate-500">Active</p>
+                    <p className="font-mono font-medium text-slate-900 tabular-nums">
+                      {mp.activeListings}/{mp.totalListings}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500">Suppressed</p>
+                    <p
+                      className={`font-mono font-medium tabular-nums ${
+                        mp.suppressedListings > 0 ? 'text-red-700' : 'text-slate-900'
+                      }`}
+                    >
+                      {mp.suppressedListings}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500">Issues</p>
+                    <p className="font-mono font-medium text-slate-900 tabular-nums">
+                      {mp.inventoryIssues + mp.contentIssues}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

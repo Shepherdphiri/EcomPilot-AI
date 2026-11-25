@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Loader2, MessageSquare, Send, User } from 'lucide-react';
 import { ChatMessage, UserRole } from '../types/ecom';
+import { postJson } from '../utils/api';
 
 interface AiAssistantViewProps {
   activeRole: UserRole;
@@ -28,7 +29,7 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
       id: 'welcome',
       role: 'assistant',
       content:
-        'Good morning. I am monitoring your 6 connected marketplaces (Shopify, Amazon Seller & Vendor Central, Takealot, Makro, and Leroy Merlin). Ask me anything about today’s priorities, low-stock cover, price mismatches, or delayed shipments.',
+        'Good morning. I am monitoring your Shopify store and Takealot Seller account. Ask me anything about today’s priorities, low-stock cover, price mismatches, or delayed shipments.',
       timestamp: '06:00 SAST',
     },
   ]);
@@ -58,23 +59,15 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
     setErrorMsg(null);
 
     try {
-      const res = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: trimmed,
-          role: activeRole,
-          storeContext,
-          history: nextMessages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
+      const data = await postJson<{ reply: string }>('/api/ai/chat', {
+        message: trimmed,
+        role: activeRole,
+        storeContext,
+        history: nextMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to get response from AI Assistant.');
-      }
       const replyMsg: ChatMessage = {
         id: `a-${Date.now()}`,
         role: 'assistant',

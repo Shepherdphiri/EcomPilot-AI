@@ -7,12 +7,14 @@ interface MarketplaceHealthViewProps {
   marketplaces: MarketplaceHealth[];
   onSyncMarketplace: (id: MarketplaceId) => void;
   onSyncAll: () => void;
+  onOpenConnect: () => void;
 }
 
 export const MarketplaceHealthView: React.FC<MarketplaceHealthViewProps> = ({
   marketplaces,
   onSyncMarketplace,
   onSyncAll,
+  onOpenConnect,
 }) => {
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
@@ -34,9 +36,12 @@ export const MarketplaceHealthView: React.FC<MarketplaceHealthViewProps> = ({
 
   const totalListings = marketplaces.reduce((s, m) => s + m.totalListings, 0);
   const totalSuppressed = marketplaces.reduce((s, m) => s + m.suppressedListings, 0);
-  const avgScore = Math.round(
-    marketplaces.reduce((s, m) => s + m.healthScore, 0) / marketplaces.length
-  );
+  const avgScore =
+    marketplaces.length > 0
+      ? Math.round(
+          marketplaces.reduce((s, m) => s + m.healthScore, 0) / marketplaces.length
+        )
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -47,18 +52,27 @@ export const MarketplaceHealthView: React.FC<MarketplaceHealthViewProps> = ({
               Marketplace Health Monitor
             </h1>
             <p className="mt-1 text-sm text-slate-600">
-              Modular connector telemetry across Shopify, Amazon Seller & Vendor Central, Takealot, Makro, and Leroy Merlin.
+              Modular connector telemetry across your Shopify store and Takealot Seller account.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleSyncAll}
-            disabled={syncingId !== null}
-            className="inline-flex items-center gap-2 rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-800 disabled:opacity-60 whitespace-nowrap shrink-0"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncingId === 'all' ? 'animate-spin' : ''}`} />
-            Sync All Connectors
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={onOpenConnect}
+              className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 whitespace-nowrap"
+            >
+              Connect Channels
+            </button>
+            <button
+              type="button"
+              onClick={handleSyncAll}
+              disabled={syncingId !== null}
+              className="inline-flex items-center gap-2 rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-800 disabled:opacity-60 whitespace-nowrap"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncingId === 'all' ? 'animate-spin' : ''}`} />
+              Sync All Connectors
+            </button>
+          </div>
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-4 border-t border-slate-200 pt-5 sm:grid-cols-4">
@@ -107,65 +121,73 @@ export const MarketplaceHealthView: React.FC<MarketplaceHealthViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {marketplaces.map((mp) => (
-                <tr key={mp.id} className="hover:bg-slate-50/70">
-                  <td className="px-6 py-4">
-                    <p className="font-semibold text-slate-900">{mp.name}</p>
-                    <p className="text-xs text-slate-500">
-                      {mp.region} · Synced {mp.lastSynced}
-                    </p>
-                  </td>
-                  <td className="px-4 py-4 font-mono text-xs text-slate-600">
-                    {mp.connectorType}
-                  </td>
-                  <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-900">
-                    {mp.totalListings}
-                  </td>
-                  <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-900">
-                    {mp.activeListings}
-                  </td>
-                  <td
-                    className={`px-4 py-4 text-right font-mono font-semibold tabular-nums ${
-                      mp.suppressedListings > 0 ? 'text-red-700' : 'text-emerald-700'
-                    }`}
-                  >
-                    {mp.suppressedListings}
-                  </td>
-                  <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-700">
-                    {mp.inventoryIssues}
-                  </td>
-                  <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-700">
-                    {mp.contentIssues}
-                  </td>
-                  <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-900">
-                    {formatZar(mp.revenueYesterdayZar)}
-                  </td>
-                  <td className="px-4 py-4 text-right">
-                    <span
-                      className={`font-mono text-sm font-bold tabular-nums ${scoreColorClass(
-                        mp.healthScore
-                      )}`}
-                    >
-                      {mp.healthScore}/100
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleSyncOne(mp.id)}
-                      disabled={syncingId !== null}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 whitespace-nowrap"
-                    >
-                      {syncingId === mp.id ? (
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                      )}
-                      Refresh
-                    </button>
+              {marketplaces.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-6 py-10 text-center text-sm text-slate-500">
+                    No marketplaces loaded. Click <span className="font-medium text-slate-800">Connect Channels</span> above to sync Shopify or Takealot, or enable Demo Data in the sidebar.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                marketplaces.map((mp) => (
+                  <tr key={mp.id} className="hover:bg-slate-50/70">
+                    <td className="px-6 py-4">
+                      <p className="font-semibold text-slate-900">{mp.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {mp.region} · Synced {mp.lastSynced}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4 font-mono text-xs text-slate-600">
+                      {mp.connectorType}
+                    </td>
+                    <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-900">
+                      {mp.totalListings}
+                    </td>
+                    <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-900">
+                      {mp.activeListings}
+                    </td>
+                    <td
+                      className={`px-4 py-4 text-right font-mono font-semibold tabular-nums ${
+                        mp.suppressedListings > 0 ? 'text-red-700' : 'text-emerald-700'
+                      }`}
+                    >
+                      {mp.suppressedListings}
+                    </td>
+                    <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-700">
+                      {mp.inventoryIssues}
+                    </td>
+                    <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-700">
+                      {mp.contentIssues}
+                    </td>
+                    <td className="px-4 py-4 text-right font-mono tabular-nums text-slate-900">
+                      {formatZar(mp.revenueYesterdayZar)}
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <span
+                        className={`font-mono text-sm font-bold tabular-nums ${scoreColorClass(
+                          mp.healthScore
+                        )}`}
+                      >
+                        {mp.healthScore}/100
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleSyncOne(mp.id)}
+                        disabled={syncingId !== null}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {syncingId === mp.id ? (
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                        )}
+                        Refresh
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

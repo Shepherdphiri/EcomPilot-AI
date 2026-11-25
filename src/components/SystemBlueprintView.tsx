@@ -55,7 +55,7 @@ export const SystemBlueprintView: React.FC = () => {
               Startup Technical Specification
             </p>
             <h1 className="mt-1 font-display text-xl font-bold text-slate-900">
-              EcomPilot AI — System Architecture & Implementation Blueprint
+              EcomPilot — System Architecture & Implementation Blueprint
             </h1>
             <p className="mt-1 text-sm text-slate-600">
               Modular architecture for Flutter, Node.js Express, Supabase PostgreSQL/Auth, Cloudinary, Google Gemini API, and Railway hosting.
@@ -95,7 +95,7 @@ export const SystemBlueprintView: React.FC = () => {
               viewBox="0 0 980 460"
               className="w-full min-w-[780px] rounded-lg border border-slate-200 bg-slate-50"
               role="img"
-              aria-label="EcomPilot AI System Architecture Diagram"
+              aria-label="EcomPilot System Architecture Diagram"
             >
               {/* Layer 1: Client Apps */}
               <rect x="30" y="30" width="210" height="120" rx="8" fill="#FFFFFF" stroke="#CBD5E1" />
@@ -327,7 +327,7 @@ export const SystemBlueprintView: React.FC = () => {
                 Complete UI Wireframe Blueprints (Desktop & Flutter Mobile)
               </h2>
               <p className="text-xs text-slate-500">
-                Inspect structural layout contracts for each primary EcomPilot AI workflow.
+                Inspect structural layout contracts for each primary EcomPilot workflow.
               </p>
             </div>
             <div className="flex flex-wrap gap-1 rounded-md bg-slate-100 p-1">
@@ -364,7 +364,7 @@ export const SystemBlueprintView: React.FC = () => {
               <div className="grid grid-cols-12 gap-3 rounded border border-slate-300 bg-white p-3">
                 <div className="col-span-3 space-y-2 border-r border-slate-200 pr-3">
                   <div className="h-6 rounded bg-slate-200 px-2 py-1 font-mono text-[10px] text-slate-700">
-                    EcomPilot AI
+                    EcomPilot
                   </div>
                   <div className="h-7 rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-[10px] text-slate-600">
                     Role Selector
@@ -452,7 +452,7 @@ export const SystemBlueprintView: React.FC = () => {
               </p>
               <div className="mx-auto max-w-[240px] space-y-2.5 rounded-xl border-2 border-slate-400 bg-white p-3 font-mono text-[10px]">
                 <div className="flex justify-between border-b border-slate-200 pb-1.5 font-bold">
-                  <span>EcomPilot AI</span>
+                  <span>EcomPilot</span>
                   <span>Exec Role ▾</span>
                 </div>
                 <div className="rounded border border-slate-200 p-2">

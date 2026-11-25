@@ -4,25 +4,19 @@ export type UserRole =
   | 'inventory_manager'
   | 'executive';
 
-export type MarketplaceId =
-  | 'shopify'
-  | 'amazon_seller'
-  | 'amazon_vendor'
-  | 'takealot'
-  | 'makro'
-  | 'leroy_merlin';
+export type MarketplaceId = 'shopify' | 'takealot';
 
 export type PrioritySeverity = 'critical' | 'high' | 'medium' | 'low';
 
 export type NavSection =
   | 'priority'
   | 'marketplaces'
+  | 'connect_channels'
   | 'listings'
   | 'inventory_pricing'
   | 'reviews_shipping'
   | 'daily_report'
-  | 'assistant'
-  | 'blueprint';
+  | 'assistant';
 
 export interface PriorityTask {
   id: string;
@@ -168,7 +162,6 @@ export interface DailyReportData {
 }
 
 export interface GeneratedListingContent {
-  amazonTitle: string;
   takealotTitle: string;
   shopifyTitle: string;
   bulletPoints: string[];

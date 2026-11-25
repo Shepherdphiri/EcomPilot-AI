@@ -8,6 +8,7 @@ import {
   Truck,
 } from 'lucide-react';
 import { ReviewCluster, ShipmentRecord } from '../types/ecom';
+import { postJson } from '../utils/api';
 import { scoreColorClass } from '../utils/formatters';
 
 interface ReviewsShippingViewProps {
@@ -37,32 +38,38 @@ export const ReviewsShippingView: React.FC<ReviewsShippingViewProps> = ({
       .map((l) => l.trim())
       .filter(Boolean);
     const reviewsToAnalyze =
-      lines.length > 0 ? lines : targetCluster.sampleReviews;
+      lines.length > 0 ? lines : targetCluster?.sampleReviews || [];
+
+    if (reviewsToAnalyze.length === 0) {
+      setAnalyzeError('Paste at least one customer review line above to analyze.');
+      return;
+    }
 
     setAnalyzing(true);
     setAnalyzeError(null);
     try {
-      const res = await fetch('/api/ai/analyze-reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sku: targetCluster.sku,
-          productName: targetCluster.productName,
-          reviews: reviewsToAnalyze,
-        }),
+      const data = await postJson<{
+        sentimentScore: number;
+        topComplaint: string;
+        complaintMentions: number;
+        topPositive: string;
+        positiveMentions: number;
+        recommendation: string;
+      }>('/api/ai/analyze-reviews', {
+        sku: targetCluster?.sku || 'CUSTOM-SKU',
+        productName: targetCluster?.productName || 'Custom Product Batch',
+        reviews: reviewsToAnalyze,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to analyze reviews.');
+      if (targetCluster) {
+        onUpdateReviewCluster(targetCluster.sku, {
+          sentimentScore: data.sentimentScore,
+          topComplaint: data.topComplaint,
+          complaintMentions: data.complaintMentions,
+          topPositive: data.topPositive,
+          positiveMentions: data.positiveMentions,
+          recommendation: data.recommendation,
+        });
       }
-      onUpdateReviewCluster(targetCluster.sku, {
-        sentimentScore: data.sentimentScore,
-        topComplaint: data.topComplaint,
-        complaintMentions: data.complaintMentions,
-        topPositive: data.topPositive,
-        positiveMentions: data.positiveMentions,
-        recommendation: data.recommendation,
-      });
       setCustomReviewInput('');
     } catch (err) {
       setAnalyzeError(
@@ -116,7 +123,12 @@ export const ReviewsShippingView: React.FC<ReviewsShippingViewProps> = ({
       {activeTab === 'reviews' ? (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
           <div className="space-y-4 xl:col-span-8">
-            {reviews.map((cluster) => (
+            {reviews.length === 0 ? (
+              <div className="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
+                No review clusters loaded. Paste customer reviews in the panel on the right to analyze sentiment, or switch Workspace Data to Use Demo in the sidebar.
+              </div>
+            ) : (
+              reviews.map((cluster) => (
               <article
                 key={cluster.id}
                 className="rounded-lg border border-slate-200 bg-white p-6"
@@ -178,7 +190,8 @@ export const ReviewsShippingView: React.FC<ReviewsShippingViewProps> = ({
                   </p>
                 </div>
               </article>
-            ))}
+              ))
+            )}
           </div>
 
           <section className="rounded-lg border border-slate-200 bg-white p-6 xl:col-span-4 self-start">
@@ -201,13 +214,18 @@ export const ReviewsShippingView: React.FC<ReviewsShippingViewProps> = ({
                   id="review-sku"
                   value={selectedSku}
                   onChange={(e) => setSelectedSku(e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-700 focus:outline-none"
+                  disabled={reviews.length === 0}
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-700 focus:outline-none disabled:bg-slate-50"
                 >
-                  {reviews.map((r) => (
-                    <option key={r.sku} value={r.sku}>
-                      {r.sku} — {r.productName}
-                    </option>
-                  ))}
+                  {reviews.length === 0 ? (
+                    <option value="">Custom review batch</option>
+                  ) : (
+                    reviews.map((r) => (
+                      <option key={r.sku} value={r.sku}>
+                        {r.sku} — {r.productName}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -271,7 +289,14 @@ export const ReviewsShippingView: React.FC<ReviewsShippingViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {shipments.map((s) => (
+                {shipments.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-10 text-center text-sm text-slate-500">
+                      No waybill records loaded. Switch Workspace Data to Use Demo in the sidebar to inspect sample courier reconciliations.
+                    </td>
+                  </tr>
+                ) : (
+                  shipments.map((s) => (
                   <tr key={s.id} className="hover:bg-slate-50/70">
                     <td className="px-6 py-4">
                       <p className="font-mono text-sm font-semibold text-slate-900">
@@ -337,7 +362,8 @@ export const ReviewsShippingView: React.FC<ReviewsShippingViewProps> = ({
                       )}
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
