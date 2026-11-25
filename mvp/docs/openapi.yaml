@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: EcomPilot Production SaaS API
+  version: 1.0.0
+  description: Multi-marketplace ecommerce operations API with Stripe billing, profitability analysis, competitor tracking, notifications, and Gemini intelligence.
+servers:
+  - url: https://api.ecompilot.ai/api/v1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+paths:
+  /auth/session:
+    get:
+      summary: Resolve authenticated user, active workspace, role, and Stripe plan limits
+      responses:
+        "200":
+          description: Active user session and workspace context
+  /priority-center:
+    get:
+      summary: Fetch daily prioritized tasks ranked by Priority Scoring Algorithm
+      responses:
+        "200":
+          description: Prioritized task queue grouped by Critical, High, Medium, Low
+  /tasks/{taskId}/resolve:
+    post:
+      summary: Resolve a priority task and write an immutable audit log entry
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task resolved
+  /profitability/sku/{sku}:
+    get:
+      summary: Compute net profit, margin %, and break-even price across channels
+      parameters:
+        - in: path
+          name: sku
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Channel-by-channel profitability breakdown
+  /competitors/scan:
+    post:
+      summary: Run competitor price tracking and Buy Box risk evaluation
+      responses:
+        "200":
+          description: Undercutting alerts and safe price floor actions
+  /billing/checkout-session:
+    post:
+      summary: Create Stripe Checkout session for Starter, Growth, or Enterprise tier
+      responses:
+        "200":
+          description: Checkout URL
+  /billing/webhook:
+    post:
+      summary: Stripe webhook receiver verifying stripe-signature header
+      security: []
+      responses:
+        "200":
+          description: Event processed
+  /ai/content-generate:
+    post:
+      summary: Generate Amazon, Takealot, and Shopify copy from specs + product image
+      responses:
+        "200":
+          description: Structured English marketplace listing assets
+  /ai/recommendations/refresh:
+    post:
+      summary: Generate prioritized operational recommendations via Gemini
+      responses:
+        "200":
+          description: Persisted AI recommendations with ZAR ROI estimates
+  /ai/chat:
+    post:
+      summary: Conversational operations assistant grounded in live workspace metrics
+      responses:
+        "200":
+          description: Plain-business-language response

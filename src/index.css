@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Jost", system-ui, sans-serif;
+  --font-sans: "Jost", system-ui, sans-serif;
+  --font-mono: "Jost", system-ui, sans-serif;
+}
+
+@layer base {
+  html,
+  body,
+  button,
+  input,
+  select,
+  textarea,
+  pre,
+  code {
+    font-family: "Jost", system-ui, sans-serif;
+  }
+
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

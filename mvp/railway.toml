@@ -1,0 +1,12 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "apps/api_node/Dockerfile"
+
+[[services]]
+name = "ecompilot-api"
+startCommand = "npm run start --workspace=apps/api_node"
+healthcheckPath = "/health"
+
+[[services]]
+name = "ecompilot-worker"
+startCommand = "npm run worker --workspace=apps/api_node"

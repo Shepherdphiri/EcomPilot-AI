@@ -1,0 +1,6 @@
+{
+  "name": "EcomPilot AI",
+  "description": "AI-powered Ecommerce Operations Manager for multi-marketplace teams selling on Shopify, Amazon, Takealot, Makro, and Leroy Merlin.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

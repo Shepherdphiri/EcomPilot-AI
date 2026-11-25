@@ -1,0 +1,52 @@
+name: EcomPilot CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api-test-and-typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mvp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mvp/package.json
+      - run: npm ci
+      - run: npm run typecheck --workspace=apps/api_node
+      - run: npm run test --workspace=apps/api_node
+
+  flutter-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.0"
+          channel: stable
+      - working-directory: mvp/apps/mobile_flutter
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+
+  deploy-production:
+    needs: [api-test-and-typecheck, flutter-verify]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy API & Worker to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          npm i -g @railway/cli
+          railway up --service ecompilot-api --detach
+          railway up --service ecompilot-worker --detach

@@ -1,0 +1,8 @@
+{
+  "name": "ecompilot-ai-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/api_node",
+    "packages/connectors"
+  ]
+}
