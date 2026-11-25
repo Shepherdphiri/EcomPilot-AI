@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 buildCommand = "npm install --include=dev && npm run build"
 
 [deploy]
-startCommand = "NODE_ENV=production npm start"
+startCommand = "NODE_ENV=production node --experimental-strip-types server.ts"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
