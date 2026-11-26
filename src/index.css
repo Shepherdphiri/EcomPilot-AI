@@ -7,6 +7,10 @@
 }
 
 @layer base {
+  html {
+    color-scheme: dark;
+  }
+
   html,
   body,
   button,
@@ -19,11 +23,30 @@
   }
 
   body {
-    background-color: #f8fafc;
-    color: #0f172a;
+    background-color: #0b0d12;
+    color: #f1f5f9;
   }
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Subtle dark scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b0d12;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.22);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.38);
 }

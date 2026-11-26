@@ -234,7 +234,7 @@ Requirements:
     }
   });
 
-  // 2. AI Assistant Chat (Plain business language grounded in live operational state)
+  // 2. AI Business Analyst Chat (Plain business language + optional mini-chart grounded in live operational state)
   app.post('/api/ai/chat', async (req: Request, res: Response) => {
     try {
       const { message, role, storeContext, history } = req.body as {
@@ -256,14 +256,13 @@ Requirements:
         .map((m) => `${m.role === 'user' ? 'User' : 'EcomPilot'}: ${m.content}`)
         .join('\n');
 
-      const systemInstruction = `You are EcomPilot, an expert Ecommerce Operations Manager assistant for a multi-marketplace seller operating on Shopify and Takealot Marketplace.
+      const systemInstruction = `You are EcomPilot AI Business Analyst, an executive Ecommerce Operations Director for a multi-channel South African & global seller operating on Shopify, Takealot, Makro Marketplace, Amazon Seller Central, Amazon Vendor Central, and WooCommerce.
 Active user role: ${role || 'ecommerce_manager'}.
 Currency: South African Rand (ZAR, prefix R).
 
 Rules:
-- Respond in plain, decisive business language. Never output raw JSON or technical jargon.
-- Be specific: cite exact SKUs, ZAR figures, days of cover, marketplace names, and concrete next actions from the live operational snapshot below.
-- Keep answers concise, scannable (short paragraphs or crisp numbered points), and focused on what requires attention and why.
+- Respond in plain, decisive business language. Cite exact SKUs, ZAR figures, days of cover, margin percentages, marketplace names, and concrete next actions from the live operational snapshot below.
+- Whenever the question compares SKUs, stock cover, margins, or marketplace revenue, also populate chartTitle and 3-5 chartBars with numeric values and ZAR/days/percent formattedValue strings. Otherwise leave chartBars empty.
 
 LIVE OPERATIONAL SNAPSHOT:
 ${JSON.stringify(storeContext)}`;
@@ -276,10 +275,41 @@ ${JSON.stringify(storeContext)}`;
         contents: prompt,
         config: {
           systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              reply: { type: Type.STRING },
+              chartTitle: { type: Type.STRING },
+              chartBars: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    label: { type: Type.STRING },
+                    value: { type: Type.NUMBER },
+                    formattedValue: { type: Type.STRING },
+                  },
+                  required: ['label', 'value', 'formattedValue'],
+                },
+              },
+            },
+            required: ['reply'],
+          },
         },
       });
 
-      res.json({ reply: (response.text ?? '').trim() });
+      const parsed = JSON.parse((response.text ?? '{}').trim()) as {
+        reply?: string;
+        chartTitle?: string;
+        chartBars?: Array<{ label: string; value: number; formattedValue: string }>;
+      };
+
+      res.json({
+        reply: (parsed.reply ?? '').trim(),
+        chartTitle: parsed.chartTitle || undefined,
+        chartBars: Array.isArray(parsed.chartBars) ? parsed.chartBars : undefined,
+      });
     } catch (err) {
       const { status, message } = extractErrorMessage(err);
       res.status(status).json({ error: message });
@@ -389,12 +419,71 @@ ${JSON.stringify(storeContext)}`;
     }
   });
 
-  // 5. Live Shopify & Takealot Channel Sync (in-memory session credentials, never returned to client)
+  // 4b. AI Margin & Dead-Stock Recovery Playbook
+  app.post('/api/ai/profit-recovery', async (req: Request, res: Response) => {
+    try {
+      const { inventory, pricing } = req.body as {
+        inventory?: unknown[];
+        pricing?: unknown[];
+      };
+      const ai = getGeminiClient();
+
+      const response = await generateContentWithRetry(ai, {
+        contents: `Analyze dead stock, overstock, and margin leakage across these SKUs:\nINVENTORY:\n${JSON.stringify(
+          inventory || []
+        )}\nPRICING:\n${JSON.stringify(pricing || [])}`,
+        config: {
+          systemInstruction:
+            'You are a South African ecommerce CFO and merchandising director. Return concrete ZAR margin recovery, bundle liquidation, and ad-spend pause recommendations.',
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              headline: { type: Type.STRING },
+              estimated30DayRecoveryZar: { type: Type.INTEGER },
+              plays: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    sku: { type: Type.STRING },
+                    playType: { type: Type.STRING },
+                    action: { type: Type.STRING },
+                    expectedImpactZar: { type: Type.INTEGER },
+                  },
+                  required: ['sku', 'playType', 'action', 'expectedImpactZar'],
+                },
+              },
+            },
+            required: ['headline', 'estimated30DayRecoveryZar', 'plays'],
+          },
+        },
+      });
+
+      const parsed = JSON.parse((response.text ?? '{}').trim());
+      res.json(parsed);
+    } catch (err) {
+      const { status, message } = extractErrorMessage(err);
+      res.status(status).json({ error: message });
+    }
+  });
+
+  // 5. Live Shopify & Takealot Channel Sync (tenant-isolated in-memory session credentials)
   interface SessionConnectors {
     shopify?: { storeDomain: string; accessToken: string };
     takealot?: { apiKey: string };
   }
-  let activeConnectors: SessionConnectors = {};
+  const connectorStore = new Map<string, SessionConnectors>();
+  const getTenantId = (req: Request): string =>
+    String(req.header('x-company-id') || 'default').trim() || 'default';
+  const getTenantConnectors = (req: Request): SessionConnectors => {
+    const id = getTenantId(req);
+    const existing = connectorStore.get(id);
+    if (existing) return existing;
+    const created: SessionConnectors = {};
+    connectorStore.set(id, created);
+    return created;
+  };
 
   function normalizeSku(raw: string): string {
     return raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -565,7 +654,8 @@ ${JSON.stringify(storeContext)}`;
     };
   }
 
-  app.get('/api/connectors/status', (_req: Request, res: Response) => {
+  app.get('/api/connectors/status', (req: Request, res: Response) => {
+    const activeConnectors = getTenantConnectors(req);
     res.json({
       shopifyConnected: Boolean(activeConnectors.shopify),
       shopifyDomain: activeConnectors.shopify?.storeDomain || null,
@@ -573,13 +663,14 @@ ${JSON.stringify(storeContext)}`;
     });
   });
 
-  app.post('/api/connectors/disconnect', (_req: Request, res: Response) => {
-    activeConnectors = {};
+  app.post('/api/connectors/disconnect', (req: Request, res: Response) => {
+    connectorStore.delete(getTenantId(req));
     res.json({ disconnected: true });
   });
 
   app.post('/api/connectors/sync', async (req: Request, res: Response) => {
     try {
+      const activeConnectors = getTenantConnectors(req);
       const { shopify, takealot } = req.body as {
         shopify?: { storeDomain?: string; accessToken?: string };
         takealot?: { apiKey?: string };
@@ -601,14 +692,14 @@ ${JSON.stringify(storeContext)}`;
       }
 
       const [shopifyRes, takealotRes] = await Promise.all([
-        activeConnectors.shopify
+        getTenantConnectors(req).shopify
           ? fetchShopifyData(
-              activeConnectors.shopify.storeDomain,
-              activeConnectors.shopify.accessToken
+              getTenantConnectors(req).shopify!.storeDomain,
+              getTenantConnectors(req).shopify!.accessToken
             )
           : Promise.resolve(null),
-        activeConnectors.takealot
-          ? fetchTakealotData(activeConnectors.takealot.apiKey)
+        getTenantConnectors(req).takealot
+          ? fetchTakealotData(getTenantConnectors(req).takealot!.apiKey)
           : Promise.resolve(null),
       ]);
 
@@ -669,18 +760,27 @@ ${JSON.stringify(storeContext)}`;
         idx += 1;
         const dailyVel = Math.round((item.units14d / 14) * 10) / 10;
         const targetPrice = item.shopifyPrice || item.takealotPrice || 0;
+        const unitCost = Math.round(targetPrice * 0.55);
 
         inventory.push({
           id: `live-inv-${idx}`,
           sku: item.sku,
           productName: item.title,
           imageUrl: item.imageUrl,
+          warehouse: 'Primary DC',
+          availableStock: item.stock,
+          reservedStock: 0,
           currentStock: item.stock,
           dailySalesVelocity: dailyVel,
+          daysSinceLastSale: dailyVel > 0 ? 0 : 30,
           incomingStock: 0,
           incomingEtaDays: null,
           reorderPointDays: 14,
-          unitCostZar: Math.round(targetPrice * 0.55),
+          supplierId: 'sup-live',
+          supplierName: 'Live Channel Supplier',
+          leadTimeDays: 7,
+          suggestedReorderQty: Math.max(20, Math.ceil(dailyVel * 21)),
+          unitCostZar: unitCost,
           sellingPriceZar: targetPrice,
           affectedChannels: [
             ...(item.shopifyPrice ? ['shopify'] : []),
@@ -694,18 +794,22 @@ ${JSON.stringify(storeContext)}`;
           tasks.push({
             id: `live-stk-${idx}`,
             severity: coverDays <= 5 ? 'critical' : 'high',
+            category: 'stock',
             title:
               coverDays <= 1
                 ? `Immediate stockout risk for SKU ${item.sku}`
                 : `Stockout predicted in ${Math.round(coverDays)} days (${item.sku})`,
             summary: `${item.stock} units remaining at ${dailyVel}/day sales velocity across connected channels.`,
+            recommendedAction: `Create replenishment PO for ${Math.max(20, Math.ceil(dailyVel * 21))} units.`,
+            dueDate: coverDays <= 5 ? 'Today' : 'This week',
             marketplace: item.takealotPrice ? 'takealot' : 'shopify',
             marketplaceLabel: item.takealotPrice ? 'Takealot' : 'Shopify',
             sku: item.sku,
             revenueImpactZar: Math.max(500, Math.round(dailyVel * targetPrice * 3)),
-            relevantRoles: ['ecommerce_manager', 'inventory_manager', 'executive'],
-            targetSection: 'inventory_pricing',
+            relevantRoles: ['owner', 'ecommerce_manager', 'inventory_manager'],
+            targetSection: 'inventory',
             actionLabel: 'Review Stock Cover',
+            oneClickActionType: 'create_po',
             detectedAt: 'Live sync',
             resolved: false,
           });
@@ -715,15 +819,19 @@ ${JSON.stringify(storeContext)}`;
           tasks.push({
             id: `live-sup-${idx}`,
             severity: 'critical',
+            category: 'listing',
             title: `Takealot listing not buyable: ${item.suppressedOnTakealot}`,
             summary: `SKU ${item.sku} (${item.title}) is currently marked "${item.suppressedOnTakealot}" on Takealot Seller Portal.`,
+            recommendedAction: 'Audit missing attributes and re-submit offer compliance.',
+            dueDate: 'Today',
             marketplace: 'takealot',
             marketplaceLabel: 'Takealot',
             sku: item.sku,
             revenueImpactZar: Math.max(1200, targetPrice * 2),
-            relevantRoles: ['ecommerce_manager', 'content_manager', 'executive'],
+            relevantRoles: ['owner', 'ecommerce_manager', 'content_manager'],
             targetSection: 'listings',
             actionLabel: 'Inspect Listing',
+            oneClickActionType: 'restore_listing',
             detectedAt: 'Live sync',
             resolved: false,
           });
@@ -741,6 +849,10 @@ ${JSON.stringify(storeContext)}`;
             productName: item.title,
             costZar: Math.round(maxP * 0.55),
             targetPriceZar: maxP,
+            competitorPriceZar: maxP,
+            recommendedPriceZar: maxP,
+            marketplaceFeePct: 14,
+            fulfilmentFeeZar: 65,
             prices: {
               shopify: item.shopifyPrice,
               takealot: item.takealotPrice,
@@ -757,15 +869,19 @@ ${JSON.stringify(storeContext)}`;
             tasks.push({
               id: `live-pdiff-${idx}`,
               severity: 'high',
+              category: 'pricing',
               title: `Price mismatch on SKU ${item.sku}: Shopify R${item.shopifyPrice} vs Takealot R${item.takealotPrice}`,
               summary: `${variancePct}% cross-channel price gap detected between Shopify and Takealot.`,
+              recommendedAction: `Sync channel prices to R${maxP} target parity.`,
+              dueDate: 'Today',
               marketplace: 'takealot',
               marketplaceLabel: 'Takealot & Shopify',
               sku: item.sku,
               revenueImpactZar: Math.abs(item.shopifyPrice - item.takealotPrice) * 3,
-              relevantRoles: ['ecommerce_manager', 'executive'],
-              targetSection: 'inventory_pricing',
+              relevantRoles: ['owner', 'ecommerce_manager', 'analyst'],
+              targetSection: 'pricing',
               actionLabel: 'Align Channel Price',
+              oneClickActionType: 'sync_price',
               detectedAt: 'Live sync',
               resolved: false,
             });
@@ -782,6 +898,7 @@ ${JSON.stringify(storeContext)}`;
           shortName: 'Shopify',
           region: 'Live API',
           connectorType: 'Admin GraphQL',
+          connected: true,
           totalListings: shopifyRes.listings.length,
           activeListings: activeCount,
           suppressedListings: shopifyRes.listings.length - activeCount,
@@ -790,6 +907,9 @@ ${JSON.stringify(storeContext)}`;
           healthScore: Math.max(50, 100 - lowStockCount * 4),
           revenueYesterdayZar: shopifyRes.yesterdayRevenueZar,
           ordersYesterday: shopifyRes.yesterdayOrders,
+          returnsCount: 0,
+          cancellationsCount: 0,
+          fulfillmentSlaPercent: 98.0,
           lastSynced: 'Just now',
         });
       }
@@ -802,6 +922,7 @@ ${JSON.stringify(storeContext)}`;
           shortName: 'Takealot',
           region: 'Live API',
           connectorType: 'Seller API v2',
+          connected: true,
           totalListings: takealotRes.listings.length,
           activeListings: activeCount,
           suppressedListings: suppressedCount,
@@ -810,6 +931,9 @@ ${JSON.stringify(storeContext)}`;
           healthScore: Math.max(40, 100 - suppressedCount * 6 - lowStockCount * 3),
           revenueYesterdayZar: takealotRes.yesterdayRevenueZar,
           ordersYesterday: takealotRes.yesterdayOrders,
+          returnsCount: 0,
+          cancellationsCount: 0,
+          fulfillmentSlaPercent: 94.0,
           lastSynced: 'Just now',
         });
       }
@@ -820,6 +944,7 @@ ${JSON.stringify(storeContext)}`;
         (shopifyRes?.yesterdayOrders || 0) + (takealotRes?.yesterdayOrders || 0);
       const suppressedTotal = marketplaces.reduce((s, m) => s + m.suppressedListings, 0);
       const potentialLoss = tasks.reduce((s, t) => s + t.revenueImpactZar, 0);
+      const outOfStockCount = inventory.filter((i) => i.availableStock <= 0).length;
 
       res.json({
         syncedAt: new Date().toISOString(),
@@ -838,8 +963,10 @@ ${JSON.stringify(storeContext)}`;
           dateLabel: 'Live Store Operations Briefing',
           revenueYesterdayZar: totalRev,
           revenueDeltaPercent: 0,
+          profitEstimateZar: Math.round(totalRev * 0.24),
           ordersCount: totalOrders,
           lowStockProductsCount: lowStockCount,
+          outOfStockCount,
           suppressedListingsCount: suppressedTotal,
           delayedDeliveriesCount: 0,
           potentialRevenueLossZar: potentialLoss,

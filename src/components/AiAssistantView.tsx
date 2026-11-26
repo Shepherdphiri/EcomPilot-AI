@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Loader2, MessageSquare, Send, User } from 'lucide-react';
-import { ChatMessage, UserRole } from '../types/ecom';
+import { ChatChartBar, ChatMessage, UserRole } from '../types/ecom';
 import { postJson } from '../utils/api';
 
 interface AiAssistantViewProps {
@@ -11,11 +11,11 @@ interface AiAssistantViewProps {
 }
 
 const SUGGESTED_QUESTIONS = [
-  'What needs attention today?',
-  'Which products are low on stock?',
-  'Why were sales down yesterday?',
-  'Which listings need optimization?',
-  'Which orders are delayed?',
+  'Why are sales down?',
+  'Which products need restocking?',
+  'What listings need optimization?',
+  'Which SKUs have low margins?',
+  'What products are not selling?',
 ];
 
 export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
@@ -29,7 +29,7 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
       id: 'welcome',
       role: 'assistant',
       content:
-        'Good morning. I am monitoring your Shopify store and Takealot Seller account. Ask me anything about today’s priorities, low-stock cover, price mismatches, or delayed shipments.',
+        'Good morning. I am your EcomPilot AI Business Analyst monitoring Shopify, Takealot, Makro, Amazon, and WooCommerce. Ask me why sales moved, which SKU will stock out next, which listings need optimization, or where margins are leaking.',
       timestamp: '06:00 SAST',
     },
   ]);
@@ -59,7 +59,11 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
     setErrorMsg(null);
 
     try {
-      const data = await postJson<{ reply: string }>('/api/ai/chat', {
+      const data = await postJson<{
+        reply: string;
+        chartTitle?: string;
+        chartBars?: ChatChartBar[];
+      }>('/api/ai/chat', {
         message: trimmed,
         role: activeRole,
         storeContext,
@@ -72,6 +76,8 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
         id: `a-${Date.now()}`,
         role: 'assistant',
         content: data.reply,
+        chartTitle: data.chartTitle,
+        chartBars: data.chartBars,
         timestamp: new Date().toLocaleTimeString('en-ZA', {
           hour: '2-digit',
           minute: '2-digit',
@@ -80,7 +86,7 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
       setMessages((prev) => [...prev, replyMsg]);
     } catch (err) {
       setErrorMsg(
-        err instanceof Error ? err.message : 'Unable to connect to AI Assistant.'
+        err instanceof Error ? err.message : 'Unable to connect to AI Business Analyst.'
       );
     } finally {
       setLoading(false);
@@ -100,13 +106,13 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
   }, [messages, loading]);
 
   return (
-    <div className="flex h-[calc(100vh-8.5rem)] min-h-[540px] flex-col rounded-lg border border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-6 py-4">
-        <h1 className="font-display text-lg font-bold text-slate-900">
-          EcomPilot Operations Assistant
+    <div className="flex h-[calc(100vh-11.5rem)] min-h-[520px] flex-col rounded-xl border border-white/[0.08] bg-[#121620] lg:h-[calc(100vh-8.5rem)]">
+      <div className="border-b border-white/[0.08] px-5 py-4 lg:px-6">
+        <h1 className="font-display text-lg font-bold text-slate-100">
+          AI Business Analyst
         </h1>
-        <p className="text-xs text-slate-500">
-          Plain-business-language answers grounded in your live inventory, listings, pricing, and courier data.
+        <p className="text-xs text-slate-400">
+          Natural-language operational intelligence grounded in live inventory, pricing margins, listings, and channel telemetry.
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
@@ -116,7 +122,7 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
               type="button"
               onClick={() => sendMessage(q)}
               disabled={loading}
-              className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-800 disabled:opacity-50 whitespace-nowrap"
+              className="rounded-lg border border-white/[0.08] bg-[#0B0D12] px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-blue-500/40 hover:bg-blue-600/10 hover:text-blue-300 disabled:opacity-50 whitespace-nowrap"
             >
               {q}
             </button>
@@ -124,57 +130,99 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex gap-3 ${
-              msg.role === 'user' ? 'justify-end' : 'justify-start'
-            }`}
-          >
-            {msg.role === 'assistant' && (
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-700 text-white">
-                <MessageSquare className="h-4 w-4" />
-              </div>
-            )}
+      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 lg:px-6">
+        {messages.map((msg) => {
+          const maxBarVal =
+            msg.chartBars && msg.chartBars.length > 0
+              ? Math.max(...msg.chartBars.map((b) => Math.abs(b.value)), 1)
+              : 1;
+
+          return (
             <div
-              className={`max-w-2xl rounded-lg px-4 py-3 text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'bg-slate-900 text-white'
-                  : 'border border-slate-200 bg-slate-50 text-slate-800'
+              key={msg.id}
+              className={`flex gap-3 ${
+                msg.role === 'user' ? 'justify-end' : 'justify-start'
               }`}
             >
-              <p className="whitespace-pre-line">{msg.content}</p>
-              <p
-                className={`mt-1.5 font-mono text-[11px] ${
-                  msg.role === 'user' ? 'text-slate-300' : 'text-slate-400'
+              {msg.role === 'assistant' && (
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
+                  <MessageSquare className="h-4 w-4" />
+                </div>
+              )}
+              <div
+                className={`max-w-2xl rounded-xl px-4 py-3 text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-white/[0.08] bg-[#0E1118] text-slate-200'
                 }`}
               >
-                {msg.timestamp}
-              </p>
-            </div>
-            {msg.role === 'user' && (
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700">
-                <User className="h-4 w-4" />
+                <p className="whitespace-pre-line">{msg.content}</p>
+
+                {msg.chartBars && msg.chartBars.length > 0 && (
+                  <div className="mt-3 rounded-lg border border-white/[0.08] bg-[#121620] p-3">
+                    {msg.chartTitle && (
+                      <p className="mb-2 text-xs font-semibold text-slate-200">
+                        {msg.chartTitle}
+                      </p>
+                    )}
+                    <div className="space-y-2">
+                      {msg.chartBars.map((bar, idx) => {
+                        const pct = Math.max(
+                          6,
+                          Math.min(100, Math.round((Math.abs(bar.value) / maxBarVal) * 100))
+                        );
+                        return (
+                          <div key={idx} className="text-xs">
+                            <div className="flex items-center justify-between gap-2 text-slate-300">
+                              <span className="truncate">{bar.label}</span>
+                              <span className="font-semibold text-slate-100 tabular-nums whitespace-nowrap">
+                                {bar.formattedValue}
+                              </span>
+                            </div>
+                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                              <div
+                                className="h-full rounded-full bg-blue-500"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <p
+                  className={`mt-1.5 text-[11px] tabular-nums ${
+                    msg.role === 'user' ? 'text-blue-200' : 'text-slate-500'
+                  }`}
+                >
+                  {msg.timestamp}
+                </p>
               </div>
-            )}
-          </div>
-        ))}
+              {msg.role === 'user' && (
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-[#161B26] text-slate-300">
+                  <User className="h-4 w-4" />
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         {loading && (
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-700 text-white">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
               <MessageSquare className="h-4 w-4" />
             </div>
-            <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-600">
-              <Loader2 className="h-4 w-4 animate-spin text-blue-700" />
-              Analyzing live marketplace snapshot...
+            <div className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0E1118] px-4 py-2.5 text-sm text-slate-300">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
+              Analyzing live operational telemetry...
             </div>
           </div>
         )}
 
         {errorMsg && (
-          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <div className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -187,22 +235,22 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
           e.preventDefault();
           sendMessage(input);
         }}
-        className="flex items-center gap-3 border-t border-slate-200 px-6 py-3.5"
+        className="flex items-center gap-3 border-t border-white/[0.08] px-5 py-3.5 lg:px-6"
       >
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about stockouts, suppressed listings, price mismatches, or delayed waybills..."
-          className="flex-1 rounded-md border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-700 focus:outline-none"
+          placeholder="Ask why sales dropped, which SKU stocks out next, or which SKUs have low margins..."
+          className="flex-1 rounded-lg border border-white/[0.1] bg-[#0B0D12] px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none"
         />
         <button
           type="submit"
           disabled={loading || !input.trim()}
-          className="inline-flex items-center gap-2 rounded-md bg-blue-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50 whitespace-nowrap"
+          className="inline-flex min-h-[42px] items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50 whitespace-nowrap"
         >
-          <Send className="h-4 w-4" />
-          Send
+          <Send className="h-3.5 w-3.5" />
+          Analyze
         </button>
       </form>
     </div>

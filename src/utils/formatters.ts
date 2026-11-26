@@ -1,7 +1,7 @@
-import { PrioritySeverity } from '../types/ecom';
+import { MarketplaceId, PrioritySeverity } from '../types/ecom';
 
 export function formatZar(amount: number): string {
-  return `R${amount.toLocaleString('en-ZA')}`;
+  return `R${Math.round(amount).toLocaleString('en-ZA')}`;
 }
 
 export function severityLabel(severity: PrioritySeverity): string {
@@ -13,25 +13,55 @@ export function severityLabel(severity: PrioritySeverity): string {
     case 'medium':
       return 'Medium';
     case 'low':
-      return 'Low';
+      return 'Opportunity';
   }
 }
 
 export function severityClasses(severity: PrioritySeverity): string {
   switch (severity) {
     case 'critical':
-      return 'text-red-700 bg-red-50 border border-red-200';
+      return 'text-rose-300 bg-rose-500/10 border border-rose-500/25';
     case 'high':
-      return 'text-amber-700 bg-amber-50 border border-amber-200';
+      return 'text-amber-300 bg-amber-500/10 border border-amber-500/25';
     case 'medium':
-      return 'text-blue-700 bg-blue-50 border border-blue-200';
+      return 'text-blue-300 bg-blue-500/10 border border-blue-500/25';
     case 'low':
-      return 'text-slate-600 bg-slate-100 border border-slate-200';
+      return 'text-emerald-300 bg-emerald-500/10 border border-emerald-500/25';
+  }
+}
+
+export function severityDotClass(severity: PrioritySeverity): string {
+  switch (severity) {
+    case 'critical':
+      return 'bg-rose-500';
+    case 'high':
+      return 'bg-amber-400';
+    case 'medium':
+      return 'bg-blue-400';
+    case 'low':
+      return 'bg-emerald-400';
   }
 }
 
 export function scoreColorClass(score: number): string {
-  if (score >= 90) return 'text-emerald-700';
-  if (score >= 80) return 'text-amber-700';
-  return 'text-red-700';
+  if (score >= 88) return 'text-emerald-400';
+  if (score >= 75) return 'text-amber-400';
+  return 'text-rose-400';
+}
+
+export function channelShortName(id: MarketplaceId): string {
+  switch (id) {
+    case 'shopify':
+      return 'Shopify';
+    case 'takealot':
+      return 'Takealot';
+    case 'makro':
+      return 'Makro';
+    case 'amazon_sc':
+      return 'Amazon SC';
+    case 'amazon_vc':
+      return 'Amazon VC';
+    case 'woocommerce':
+      return 'WooCommerce';
+  }
 }

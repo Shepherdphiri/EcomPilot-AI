@@ -1,7 +1,18 @@
-export async function postJson<T>(url: string, body: unknown): Promise<T> {
+export async function postJson<T>(
+  url: string,
+  body: unknown,
+  companyId?: string
+): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (companyId) {
+    headers['x-company-id'] = companyId;
+  }
+
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(body),
   });
 

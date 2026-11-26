@@ -146,28 +146,27 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Product Catalog Audit Selector */}
-      <section className="rounded-lg border border-slate-200 bg-white p-6">
+      <section className="rounded-xl border border-white/[0.08] bg-[#121620] p-5 lg:p-6">
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
           <div>
-            <h1 className="font-display text-xl font-bold text-slate-900">
-              Listing Quality & Content Generator
+            <h1 className="font-display text-xl font-bold text-slate-100">
+              AI Listing Optimizer
             </h1>
-            <p className="mt-1 text-sm text-slate-600">
-              9-point marketplace audit paired with English-language channel copy generation for Takealot and Shopify.
+            <p className="mt-1 text-sm text-slate-400">
+              Listing health scoring (0–100), SEO, image &amp; attribute gap detection, competitive benchmarking, and multimodal channel copy generation.
             </p>
           </div>
-          <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
-            Language: English (Initial Release)
+          <span className="text-xs font-medium text-slate-400 whitespace-nowrap">
+            Takealot · Amazon · Shopify · Makro
           </span>
         </div>
 
         {listings.length === 0 ? (
-          <div className="mt-5 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-5 py-6 text-center text-sm text-slate-600">
-            No catalog audit items loaded (Demo data removed). You can still enter your own product details below to generate Takealot & Shopify listings.
+          <div className="mt-5 rounded-lg border border-dashed border-white/[0.12] bg-[#0E1118] px-5 py-6 text-center text-sm text-slate-400">
+            No catalog audit items loaded. Enter custom product specs below to generate optimized channel listings, or enable Demo Data in the sidebar.
           </div>
         ) : (
-          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             {listings.map((item) => {
               const active = item.sku === selectedListing?.sku;
               return (
@@ -175,13 +174,13 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
                   key={item.sku}
                   type="button"
                   onClick={() => handleSelectProduct(item)}
-                  className={`flex items-center gap-3.5 rounded-lg border p-3.5 text-left transition-colors ${
+                  className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
                     active
-                      ? 'border-blue-700 bg-blue-50/40'
-                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                      ? 'border-blue-500/60 bg-blue-600/10'
+                      : 'border-white/[0.08] bg-[#0E1118] hover:border-white/20'
                   }`}
                 >
-                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-slate-100">
+                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md border border-white/[0.08] bg-[#161B26]">
                     <img
                       src={item.imageUrl}
                       alt={item.title}
@@ -191,22 +190,32 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs text-slate-500">{item.sku}</span>
+                      <span className="font-mono text-[11px] text-slate-400">{item.sku}</span>
                       <span
-                        className={`font-mono text-sm font-bold tabular-nums ${scoreColorClass(
+                        className={`text-sm font-bold tabular-nums ${scoreColorClass(
                           item.listingScore
                         )}`}
                       >
                         {item.listingScore}/100
                       </span>
                     </div>
-                    <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">
+                    <p className="mt-0.5 truncate text-xs font-semibold text-slate-100">
                       {item.title}
                     </p>
-                    <p className="mt-0.5 text-xs text-slate-500">
+                    <p
+                      className={`mt-0.5 text-[11px] ${
+                        item.status === 'suppressed'
+                          ? 'text-rose-400'
+                          : item.status === 'needs_optimization'
+                          ? 'text-amber-400'
+                          : 'text-emerald-400'
+                      }`}
+                    >
                       {item.status === 'suppressed'
-                        ? 'Not buyable on Takealot'
-                        : 'Optimization available'}
+                        ? 'Suppressed / Missing Image'
+                        : item.status === 'needs_optimization'
+                        ? `${item.missingAttributes.length} attribute gaps`
+                        : 'Healthy'}
                     </p>
                   </div>
                 </button>
@@ -216,32 +225,34 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
         )}
       </section>
 
-      {/* Split Workspace: 9-Point Quality Audit + AI Generator */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        {/* Left 5 cols: Quality Breakdown & Recommendations */}
-        <section className="rounded-lg border border-slate-200 bg-white p-6 xl:col-span-5">
+        {/* Left 5 cols: 5-Pillar Scorecard + 9-Point Audit */}
+        <section className="rounded-xl border border-white/[0.08] bg-[#121620] p-5 lg:p-6 xl:col-span-5">
           {!selectedListing ? (
             <div className="py-10 text-center">
-              <h2 className="text-base font-semibold text-slate-900">
-                Listing Quality Score
+              <h2 className="text-base font-semibold text-slate-100">
+                Listing Health Scorecard
               </h2>
-              <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                No catalog audits are currently loaded. Switch Workspace Data to Use Demo in the sidebar to inspect sample 9-point audits, or generate custom product copy on the right.
+              <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                Load Demo Data in the sidebar to inspect 5-pillar SKU diagnostics, or generate custom copy on the right.
               </p>
             </div>
           ) : (
             <>
-              <div className="flex items-baseline justify-between border-b border-slate-200 pb-4">
+              <div className="flex items-baseline justify-between border-b border-white/[0.08] pb-4">
                 <div>
-                  <h2 className="text-base font-semibold text-slate-900">
-                    Listing Quality Score
+                  <h2 className="text-base font-semibold text-slate-100">
+                    Listing Health Scorecard
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    SKU {selectedListing.sku} · {selectedListing.category}
+                  <p className="text-xs text-slate-400">
+                    {selectedListing.sku} · Benchmark vs Top Competitor:{' '}
+                    <span className="font-semibold text-slate-200 tabular-nums">
+                      {selectedListing.competitorBenchmarkScore}/100
+                    </span>
                   </p>
                 </div>
                 <span
-                  className={`font-mono text-2xl font-bold tabular-nums ${scoreColorClass(
+                  className={`text-2xl font-bold tabular-nums ${scoreColorClass(
                     selectedListing.listingScore
                   )}`}
                 >
@@ -249,20 +260,59 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
                 </span>
               </div>
 
-              <div className="mt-4 space-y-3">
+              {/* 4 Pillar Sub-scores */}
+              <div className="mt-4 grid grid-cols-2 gap-3 border-b border-white/[0.08] pb-4">
+                <div className="rounded-lg border border-white/[0.06] bg-[#0E1118] p-2.5">
+                  <p className="text-[11px] text-slate-400">SEO Score</p>
+                  <p className={`text-base font-bold tabular-nums ${scoreColorClass(selectedListing.seoScore)}`}>
+                    {selectedListing.seoScore}/100
+                  </p>
+                </div>
+                <div className="rounded-lg border border-white/[0.06] bg-[#0E1118] p-2.5">
+                  <p className="text-[11px] text-slate-400">Image Quality</p>
+                  <p className={`text-base font-bold tabular-nums ${scoreColorClass(selectedListing.imageQualityScore)}`}>
+                    {selectedListing.imageQualityScore}/100
+                  </p>
+                </div>
+                <div className="rounded-lg border border-white/[0.06] bg-[#0E1118] p-2.5">
+                  <p className="text-[11px] text-slate-400">Completeness</p>
+                  <p className={`text-base font-bold tabular-nums ${scoreColorClass(selectedListing.contentCompletenessScore)}`}>
+                    {selectedListing.contentCompletenessScore}/100
+                  </p>
+                </div>
+                <div className="rounded-lg border border-white/[0.06] bg-[#0E1118] p-2.5">
+                  <p className="text-[11px] text-slate-400">Conversion Opt.</p>
+                  <p className={`text-base font-bold tabular-nums ${scoreColorClass(selectedListing.conversionScore)}`}>
+                    {selectedListing.conversionScore}/100
+                  </p>
+                </div>
+              </div>
+
+              {selectedListing.missingAttributes.length > 0 && (
+                <div className="mt-4 rounded-lg border border-rose-500/25 bg-rose-500/10 p-3 text-xs text-rose-200">
+                  <p className="font-semibold">
+                    Missing Attributes ({selectedListing.missingAttributes.length}) &amp; Images ({selectedListing.missingImagesCount})
+                  </p>
+                  <p className="mt-1 text-rose-300">
+                    {selectedListing.missingAttributes.join(' · ')}
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-4 space-y-2.5">
                 {CHECK_LABELS.map((c) => {
                   const val = selectedListing.checks[c.key];
                   const barColor =
-                    val >= 85 ? 'bg-emerald-600' : val >= 65 ? 'bg-amber-500' : 'bg-red-600';
+                    val >= 85 ? 'bg-emerald-500' : val >= 65 ? 'bg-amber-400' : 'bg-rose-500';
                   return (
                     <div key={c.key}>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-medium text-slate-700">{c.label}</span>
-                        <span className="font-mono font-semibold text-slate-900 tabular-nums">
+                        <span className="text-slate-300">{c.label}</span>
+                        <span className="font-semibold text-slate-100 tabular-nums">
                           {val}/100
                         </span>
                       </div>
-                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
                         <div
                           className={`h-full rounded-full ${barColor}`}
                           style={{ width: `${val}%` }}
@@ -273,14 +323,14 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
                 })}
               </div>
 
-              <div className="mt-6 border-t border-slate-200 pt-4">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Audit Recommendations
+              <div className="mt-5 border-t border-white/[0.08] pt-4">
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  AI Optimization Recommendations
                 </h3>
-                <ul className="mt-2.5 space-y-2 text-sm text-slate-700">
+                <ul className="mt-2.5 space-y-2 text-xs text-slate-300">
                   {selectedListing.recommendations.map((rec, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <span className="mt-1 font-mono text-xs font-semibold text-blue-700">
+                      <span className="font-mono font-semibold text-blue-400">
                         0{idx + 1}.
                       </span>
                       <span>{rec}</span>
@@ -292,13 +342,13 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
           )}
         </section>
 
-        {/* Right 7 cols: AI Content Generator Form + Results */}
-        <section className="rounded-lg border border-slate-200 bg-white p-6 xl:col-span-7">
-          <h2 className="text-base font-semibold text-slate-900">
-            Channel Copy Generator
+        {/* Right 7 cols: AI Copy Generator */}
+        <section className="rounded-xl border border-white/[0.08] bg-[#121620] p-5 lg:p-6 xl:col-span-7">
+          <h2 className="text-base font-semibold text-slate-100">
+            AI Channel Copy &amp; Keyword Generator
           </h2>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Upload a product image (optional) and verify dimensions and specs to generate channel-specific listings.
+          <p className="mt-0.5 text-xs text-slate-400">
+            Upload a product photo (optional) and verify specs to generate optimized titles, bullets, descriptions, and search keywords.
           </p>
 
           <form onSubmit={handleGenerate} className="mt-4 space-y-4">
@@ -306,7 +356,7 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
               <div>
                 <label
                   htmlFor="gen-product-name"
-                  className="mb-1 block text-xs font-medium text-slate-700"
+                  className="mb-1 block text-xs font-medium text-slate-300"
                 >
                   Product Name
                 </label>
@@ -316,15 +366,15 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
                   required
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-700 focus:outline-none"
+                  className="w-full rounded-lg border border-white/[0.1] bg-[#0B0D12] px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <div>
                 <label
                   htmlFor="gen-brand"
-                  className="mb-1 block text-xs font-medium text-slate-700"
+                  className="mb-1 block text-xs font-medium text-slate-300"
                 >
-                  Brand & Category
+                  Brand &amp; Category
                 </label>
                 <input
                   id="gen-brand"
@@ -335,7 +385,7 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
                     setBrand(b.trim());
                     if (rest.length) setCategory(rest.join('—').trim());
                   }}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-700 focus:outline-none"
+                  className="w-full rounded-lg border border-white/[0.1] bg-[#0B0D12] px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -344,26 +394,28 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
               <div>
                 <label
                   htmlFor="gen-dimensions"
-                  className="mb-1 block text-xs font-medium text-slate-700"
+                  className="mb-1 block text-xs font-medium text-slate-300"
                 >
-                  Product Dimensions & Weight
+                  Dimensions &amp; Weight
                 </label>
                 <input
                   id="gen-dimensions"
                   type="text"
                   value={dimensions}
                   onChange={(e) => setDimensions(e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-700 focus:outline-none"
+                  className="w-full rounded-lg border border-white/[0.1] bg-[#0B0D12] px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-700">
+                <label className="mb-1 block text-xs font-medium text-slate-300">
                   Product Image Upload
                 </label>
-                <label className="flex cursor-pointer items-center gap-2.5 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100">
-                  <ImagePlus className="h-4 w-4 text-slate-500" />
+                <label className="flex min-h-[38px] cursor-pointer items-center gap-2.5 rounded-lg border border-dashed border-white/[0.18] bg-[#0B0D12] px-3 py-2 text-xs font-medium text-slate-300 hover:border-blue-400">
+                  <ImagePlus className="h-4 w-4 text-slate-400" />
                   <span className="truncate">
-                    {uploadedImagePreview ? 'Custom image attached' : 'Upload PNG/JPG for visual inspection'}
+                    {uploadedImagePreview
+                      ? 'Image attached for vision analysis'
+                      : 'Upload PNG/JPG for visual inspection'}
                   </span>
                   <input
                     type="file"
@@ -378,7 +430,7 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
             <div>
               <label
                 htmlFor="gen-specs"
-                className="mb-1 block text-xs font-medium text-slate-700"
+                className="mb-1 block text-xs font-medium text-slate-300"
               >
                 Technical Specifications
               </label>
@@ -388,35 +440,35 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
                 value={specifications}
                 onChange={(e) => setSpecifications(e.target.value)}
                 required
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-700 focus:outline-none"
+                className="w-full rounded-lg border border-white/[0.1] bg-[#0B0D12] px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               {uploadedImagePreview ? (
-                <div className="flex items-center gap-2 text-xs text-slate-600">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
                   <img
                     src={uploadedImagePreview}
                     alt="Uploaded preview"
-                    className="h-8 w-8 rounded border border-slate-200 object-cover"
+                    className="h-8 w-8 rounded border border-white/[0.1] object-cover"
                   />
-                  <span>Image ready for multimodal analysis</span>
+                  <span>Ready for multimodal copy generation</span>
                 </div>
               ) : (
                 <span className="text-xs text-slate-500">
-                  Generates Takealot and Shopify copy simultaneously
+                  Generates marketplace titles, 5 bullets, description &amp; SEO keywords
                 </span>
               )}
 
               <button
                 type="submit"
                 disabled={generating}
-                className="inline-flex items-center gap-2 rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-800 disabled:opacity-60 whitespace-nowrap"
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-60 whitespace-nowrap"
               >
                 {generating ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Generating Copy...
+                    Optimizing Listing...
                   </>
                 ) : (
                   <>
@@ -429,23 +481,23 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
           </form>
 
           {errorMsg && (
-            <div className="mt-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {generated && (
-            <div className="mt-6 space-y-4 border-t border-slate-200 pt-5">
+            <div className="mt-6 space-y-4 border-t border-white/[0.08] pt-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    Generated Marketplace Assets
+                  <p className="text-sm font-semibold text-slate-100">
+                    Optimized Listing Assets
                   </p>
-                  <p className="text-xs text-slate-600">{generated.rationale}</p>
+                  <p className="text-xs text-slate-400">{generated.rationale}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-sm font-semibold text-emerald-700 tabular-nums">
+                  <span className="text-sm font-bold text-emerald-400 tabular-nums">
                     Projected Score: {generated.projectedScore}/100
                   </span>
                   {selectedListing && (
@@ -457,9 +509,9 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
                           generated.projectedScore
                         )
                       }
-                      className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 whitespace-nowrap"
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 whitespace-nowrap"
                     >
-                      Apply Score to Audit
+                      Apply to Audit
                     </button>
                   )}
                 </div>
@@ -467,20 +519,23 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
 
               {(
                 [
-                  { id: 'takealot', label: 'Takealot Title', value: generated.takealotTitle },
-                  { id: 'shopify', label: 'Shopify Title', value: generated.shopifyTitle },
-                  { id: 'meta', label: 'Meta Description', value: generated.metaDescription },
+                  { id: 'takealot', label: 'Takealot / Marketplace Title', value: generated.takealotTitle },
+                  { id: 'shopify', label: 'Shopify / D2C Headline', value: generated.shopifyTitle },
+                  { id: 'meta', label: 'SEO Meta Description', value: generated.metaDescription },
                 ] as const
               ).map((field) => (
-                <div key={field.id} className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
+                <div
+                  key={field.id}
+                  className="rounded-lg border border-white/[0.08] bg-[#0E1118] p-3"
+                >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-600">
+                    <span className="text-xs font-medium text-slate-400">
                       {field.label}
                     </span>
                     <button
                       type="button"
                       onClick={() => handleCopy(field.id, field.value)}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:text-blue-800"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300"
                     >
                       {copiedField === field.id ? (
                         <>
@@ -495,46 +550,40 @@ export const ListingContentView: React.FC<ListingContentViewProps> = ({
                       )}
                     </button>
                   </div>
-                  <p className="mt-1 text-sm text-slate-900">{field.value}</p>
+                  <p className="mt-1 text-sm text-slate-100">{field.value}</p>
                 </div>
               ))}
 
-              <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
+              <div className="rounded-lg border border-white/[0.08] bg-[#0E1118] p-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-600">
-                    Bullet Points (5)
-                  </span>
+                  <span className="text-xs font-medium text-slate-400">Bullet Points (5)</span>
                   <button
                     type="button"
-                    onClick={() =>
-                      handleCopy('bullets', generated.bulletPoints.join('\n'))
-                    }
-                    className="inline-flex items-center gap-1 text-xs font-medium text-blue-700"
+                    onClick={() => handleCopy('bullets', generated.bulletPoints.join('\n'))}
+                    className="text-xs font-medium text-blue-400"
                   >
                     {copiedField === 'bullets' ? 'Copied' : 'Copy All'}
                   </button>
                 </div>
-                <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm text-slate-800">
+                <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm text-slate-200">
                   {generated.bulletPoints.map((b, i) => (
                     <li key={i}>{b}</li>
                   ))}
                 </ul>
               </div>
 
-              <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
-                <span className="text-xs font-semibold text-slate-600">
-                  Product Description
-                </span>
-                <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-slate-800">
+              <div className="rounded-lg border border-white/[0.08] bg-[#0E1118] p-3">
+                <span className="text-xs font-medium text-slate-400">Product Description</span>
+                <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-slate-200">
                   {generated.productDescription}
                 </p>
               </div>
 
-              <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
-                <span className="text-xs font-semibold text-slate-600">
+              <div className="rounded-lg border border-white/[0.08] bg-[#0E1118] p-3">
+                <span className="text-xs font-medium text-slate-400">
                   Backend Search Keywords
                 </span>
-                <p className="mt-1 font-mono text-xs text-slate-700">
+                <p className="mt-1 font-mono text-xs text-slate-300">
                   {generated.keywords.join(' · ')}
                 </p>
               </div>
